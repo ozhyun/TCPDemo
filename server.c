@@ -5,13 +5,15 @@
 #include<unistd.h>
 #include <arpa/inet.h>
 #include<pthread.h>
+#include <stdlib.h>
+#include "msg.h"
 
 static void usage(const char *proc)
 {
     printf("Please use :%s [port]\n",proc);
 }
 
-void thread_run(void *arg)
+void *thread_run(void *arg)
 {
     printf("creat a new thread\n");
     int fd = (int)arg;
@@ -32,6 +34,44 @@ void thread_run(void *arg)
             write(fd,buf,strlen(buf));
         }
     }
+}
+
+
+void * thread_msg(void *arg)
+{
+    printf("creat a new thread\n");
+    int fd = (int)arg;
+	struct message *msg;
+	char *data;
+
+	data = malloc(BUF_LEN);
+	if (data == NULL) {
+		printf("malloc failed\n");
+		return;
+	}
+
+    while(1){
+		read_msg(fd, data, BUF_LEN);
+		msg = (struct message*)data;
+
+		printf("Get msg type %d len %d\n", msg->type, msg->length);
+
+
+		if (msg->type == MSG_REQ) {
+			msg->type = MSG_DATA;
+			msg->length = BUF_LEN;
+			send_msg(fd, msg);
+			printf("Send msg type %d len %d\n", msg->type, msg->length);
+		}
+		else if(msg->type == MSG_PING || msg->type == MSG_DATA) {
+				msg->type += 1;
+				msg->length = sizeof(struct message);
+				send_msg(fd, msg);
+		}
+
+    }
+
+	free(data);
 }
 
 int main(int argc,char *argv[])
@@ -85,7 +125,7 @@ int main(int argc,char *argv[])
         printf("get connect,ip is : %s port is : %d\n",inet_ntoa(peer.sin_addr),ntohs(peer.sin_port));
 
         pthread_t id;
-        pthread_create(&id,NULL,thread_run,(void*)fd);
+        pthread_create(&id,NULL,thread_msg,(void*)fd);
 
         pthread_detach(id);
 

@@ -6,11 +6,17 @@
 #include<errno.h>
 #include<netinet/in.h>
 #include<arpa/inet.h>
+#include <time.h>
+#include <stdlib.h>
+#include "msg.h"
 
 static void usage(const char *proc)
 {
     printf("please use : %s [ip] [port]\n",proc);
 }
+
+
+
 
 int main(int argc,char *argv[])
 {
@@ -39,7 +45,9 @@ int main(int argc,char *argv[])
     
     printf("connect success!\n");
 
+	/**
     char buf[1024];
+    
     while(1){
         memset(buf,'\0',sizeof(buf));
         printf("please enter:");
@@ -59,6 +67,51 @@ int main(int argc,char *argv[])
             }
         }
     }
+	*/
+
+	struct message *msg;
+	struct timespec  ts, te;
+	char *data;
+
+	data = malloc(BUF_LEN); // 40M
+	if (data == NULL) {
+		printf("malloc failed\n");
+		return -1;
+	}
+	
+	// ping
+	msg = (struct message*)data;
+	msg->type = MSG_PING;
+	msg->length = sizeof(struct message);
+	clock_gettime(CLOCK_MONOTONIC, &ts);
+	send_msg(sock, msg);
+	read_msg(sock, data, BUF_LEN);
+	clock_gettime(CLOCK_MONOTONIC, &te);
+	printf("Latency: %d s %ld ns\n", te.tv_sec - ts.tv_sec, te.tv_nsec - ts.tv_nsec);
+
+	// upload
+	msg = (struct message*)data;
+	msg->type = MSG_DATA;
+	msg->length = BUF_LEN;
+	clock_gettime(CLOCK_MONOTONIC, &ts);
+	send_msg(sock, msg);
+	read_msg(sock, data, BUF_LEN);
+	clock_gettime(CLOCK_MONOTONIC, &te);
+	printf("Upload: %d s %ld ns\n", te.tv_sec - ts.tv_sec, te.tv_nsec - ts.tv_nsec);
+
+	// download
+	msg = (struct message*)data;
+	msg->type = MSG_REQ;
+	msg->length = sizeof(struct message);
+	clock_gettime(CLOCK_MONOTONIC, &ts);
+	send_msg(sock, msg);
+	read_msg(sock, data, BUF_LEN);
+	clock_gettime(CLOCK_MONOTONIC, &te);
+	printf("Download: %d s %ld ns\n", te.tv_sec - ts.tv_sec, te.tv_nsec - ts.tv_nsec);
+
+
     close(sock);
     return 0;
 }
+
+
