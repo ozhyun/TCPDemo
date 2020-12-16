@@ -87,7 +87,7 @@ int main(int argc,char *argv[])
 	send_msg(sock, msg);
 	read_msg(sock, data, BUF_LEN);
 	clock_gettime(CLOCK_MONOTONIC, &te);
-	printf("Latency: %d s %ld ns\n", te.tv_sec - ts.tv_sec, te.tv_nsec - ts.tv_nsec);
+	printf("Latency: %d s %ld ms\n", te.tv_sec - ts.tv_sec, (te.tv_nsec - ts.tv_nsec)/(1000*1000));
 
 	// upload
 	msg = (struct message*)data;
@@ -97,7 +97,11 @@ int main(int argc,char *argv[])
 	send_msg(sock, msg);
 	read_msg(sock, data, BUF_LEN);
 	clock_gettime(CLOCK_MONOTONIC, &te);
-	printf("Upload: %d s %ld ns\n", te.tv_sec - ts.tv_sec, te.tv_nsec - ts.tv_nsec);
+	unsigned long long  gap = (te.tv_sec-ts.tv_sec)*1000 + (te.tv_nsec - ts.tv_nsec)/(1000*10000);
+	unsigned long long  bw = (BUF_LEN)/1024;
+	printf("Cost %llu ms to send %llu KB\n", gap, bw);
+	bw = bw*1000/gap;
+	printf("Upload: %d s %ld ns bw %llu KBps\n", te.tv_sec - ts.tv_sec, te.tv_nsec - ts.tv_nsec, bw);
 
 	// download
 	msg = (struct message*)data;
@@ -107,7 +111,11 @@ int main(int argc,char *argv[])
 	send_msg(sock, msg);
 	read_msg(sock, data, BUF_LEN);
 	clock_gettime(CLOCK_MONOTONIC, &te);
-	printf("Download: %d s %ld ns\n", te.tv_sec - ts.tv_sec, te.tv_nsec - ts.tv_nsec);
+	gap = (te.tv_sec-ts.tv_sec)*1000 + (te.tv_nsec - ts.tv_nsec)/(1000*10000);
+	bw = (BUF_LEN)/1024;
+	printf("Cost %llu ms to download %llu KB\n", gap, bw);
+	bw = bw*1000/gap;
+	printf("Download: %d s %ld ns bw %llu KBps\n", te.tv_sec - ts.tv_sec, te.tv_nsec - ts.tv_nsec, bw);
 
 
     close(sock);
